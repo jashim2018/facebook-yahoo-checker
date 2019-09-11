@@ -54,7 +54,11 @@
 		$res = json_encode($res);
 	}else{
 		$res->code = 'bad';
+		$res->uname = 'undefined';
+		$res->email = 'undefined';
+		$res = json_encode($res);
 	}
+	// echo var_dump($res);
 	echo $res;
 
 ?>
