@@ -4,3 +4,6 @@ A Facebook App that checks if you are vulnerable in Yahoo Cloning
 <small>
   <kbd>Author: Winmar Dulpina</kbd>
 </small>
+
+<h1>NOTE: Facebook's last update disallowed the sending of codes through cloned yahoo accounts.<br/>
+  And that ends this project's future updates.</h1>
